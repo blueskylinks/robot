@@ -1,0 +1,132 @@
+package com.avaya.ix.api.aapps;
+
+import com.avaya.ix.aapps.invoker.ApiException;
+import com.avaya.ix.api.aapps.rest.endpoints.AutomatedAppsRestEndpoints;
+import com.avaya.ix.api.common.parallel.CommonStepData;
+import com.avaya.ix.api.common.parallel.Context;
+import com.avaya.ix.api.customer.journey.libraries.Util;
+import com.avaya.ix.api.digital.rest.endpoints.ApplicationCenterRestEndPoints;
+import com.avaya.ix.api.digital.rest.payloads.VoiceConfigPayloads;
+import com.avaya.ix.api.ed.workflow.WorkflowDraftAPIFacade;
+import com.avaya.ix.api.ed.workflow.WorkflowType;
+import com.avaya.ix.api.ed.workflow.model.tasks.AutomationTaskProperties;
+import com.avaya.ix.api.ed.workflow.model.tasks.TaskProperties;
+import com.avaya.ix.api.ed.workflow.model.tasks.TaskType;
+import com.avaya.ix.api.ngm.util.NGMConfigurationKeyCloak;
+import com.avaya.ix.api.ngm.util.NGMConfigurationUtilsAddOpenAPI;
+import com.avaya.ix.api.ngm.util.UpdatedNGMConstants;
+import com.avaya.ix.ui.solutionTests.libraries.WorkspaceConfigurations;
+import cucumber.api.java.en.Then;
+import io.cucumber.datatable.DataTable;
+import io.restassured.http.ContentType;
+import io.restassured.http.Header;
+import io.restassured.path.json.JsonPath;
+import io.restassured.response.Response;
+import org.json.JSONException;
+import org.json.simple.parser.ParseException;
+import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
+
+import static io.restassured.RestAssured.given;
+
+public class AAppsCBAStepDef {
+    private static final Logger log = LoggerFactory.getLogger(AAppsCBAStepDef.class);
+    private CommonStepData commonStepData = null;
+    private String accountName = null;
+    private String accountDomain = null;
+    private String baseUrl = null;
+    private String tenantAdminId = null;
+    private String tenantAdminPassword = null;
+    private String tenantId = null;
+    private String accessToken = null;
+    private String callbackId = null;
+
+public AAppsCBAStepDef(CommonStepData commonStepData) {    
+    super();
+    this.commonStepData = commonStepData;
+    baseUrl = commonStepData.getContext(Context.BASE_URL).toString();
+    tenantId = commonStepData.getContext(Context.ACCOUNT_ID).toString();
+    accountName = commonStepData.getContext(Context.ACCOUNT_NAME).toString();
+    accountDomain = commonStepData.getContext(Context.ACCOUNT_DOMAIN).toString();
+    tenantAdminId = "admin@" + accountDomain;
+    try {
+        tenantAdminPassword = WorkspaceConfigurations.labSettings.getData("keycloak.changePassword");
+    } catch  (JSONException e) {
+        e.printStackTrace();
+        Assert.fail("Exception while getting admin credentials for tenant...!!!" + e.getMessage());
+    }    
+    accessToken = NGMConfigurationKeyCloak.getClientAccessToken("cm", tenantAdminId,
+            tenantAdminPassword, accountName);
+}
+
+    @Then("Create callback request")
+    public void createCallbackRequest() {
+    log.info("creating callback......");
+
+    /*
+    Response response =
+            given()
+                    .header("Authorization", "key=AAAA2ByWmpo:APA91bHVLlXMK9JVM4csti4aoWxhOF-8JSqNPRfIT09ocCs3yTZo2HA4TFPfNVuyhfRtI7exhwg9GBNvdM_EEPZihas8aS_lF272WqpSV9XVIJ-mup8V6bX6Af-2QeDhnwSJd0A0mGUi")
+                    .and()
+                    .contentType(ContentType.JSON)
+                    .and()
+                    .relaxedHTTPSValidation()
+                    .and()
+                    .body("{\n" +
+                            "    \"to\": \"eG8tI_dER7SJ6EkWjaBCyr:APA91bEaTIK2EzY0a-vscgN5ZjRIDnPJgR9OEH5T2Z480ytkMP2U7RpBtlZ6W4PiBM2cv-Fpwk9D8WAOeyXQ9MftaoPzXH421HBimsv1D1oEqwJ7654EejCzJa_ltjZJOCxdZrEhnV4o\",\n" +
+                            "    \"data\": {\n" +
+                            "        \"mydata\": \"fcmtest update again\"\n" +
+                            "     },\n" +
+                            "    \"android\":{\n" +
+                            "      \"priority\":\"high\"\n" +
+                            "    },\n" +
+                            "    \"apns\":{\n" +
+                            "      \"headers\":{\n" +
+                            "        \"apns-priority\":\"5\"\n" +
+                            "      }\n" +
+                            "    },\n" +
+                            "    \"webpush\": {\n" +
+                            "      \"headers\": {\n" +
+                            "        \"Urgency\": \"high\"\n" +
+                            "      }\n" +
+                            "    }\n" +
+                            "\n" +
+                            "}")
+                    .when()
+                    .log().all().post("https://fcm.googleapis.com/fcm/send")
+                    .then()
+                    .log().all().extract().response(); */
+
+        Response response =
+                given()
+                        .header("Authorization", "")
+                        .contentType("application/x-www-form-urlencoded")
+                        .formParam("grant_type","client_credentials")
+                        .formParam("client_id","bdd")
+                        .formParam("client_secret","bdd_client_secret")
+                        .relaxedHTTPSValidation()
+                        .log().all().post("https://dev-14.ixcc-sandbox.avayacloud.com/auth/realms/system/protocol/openid-connect/token")
+                        .then()
+                        .log().all().extract().response();
+
+        Assert.assertTrue(response.statusCode() == 200);
+
+    JsonPath jsonResponse = response.jsonPath();
+    callbackId = jsonResponse.get("callbackId");
+
+
+
+    }
+
+    @Then("Update callback request")
+    public void getallbackRequest() {
+        log.info("updating callback: " + callbackId);
+    }            
+            
+    
+
+}
